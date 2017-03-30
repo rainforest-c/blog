@@ -16,13 +16,13 @@ widgets_on_small_screens: false ## Set to true to enable widgets on small screen
 
 menu:
   - page: home
-    directory: /
+    directory: .
     icon: fa-home
   - page: archive
-    directory: /archives/
+    directory: archives/
     icon: fa-archive
   - page: about
-    directory: /about/
+    directory: about/
     icon: fa-user
   - page: rss
     directory: atom.xml
