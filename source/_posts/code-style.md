@@ -1,5 +1,5 @@
 ---
-title: Linux内核编程规范
+title: Linux内核C代码规范
 date: 2017-03-31 14:42:42
 category: 工作与学习
 tags: 	
@@ -7,7 +7,13 @@ tags:
     - linux
 ---
 
-参加工作以后，公司没有规定编程语言的规范，所以我就参考了[Linux kernel coding style][1]作为编程规范。
+参加工作以后，公司没有规定编程语言的规范，所以我就参考了[Linux kernel coding style][1]作为C语言代码编程规范，记录此文以供日后参考。
+
+本文主要参考和搬运于:
+* [Linux kernel coding style][1]
+* [Linux 内核Coding Style整理][2]
+
+侵删致歉。
 
 ## 1. 缩进
 
@@ -35,7 +41,7 @@ default:
 
 ## 2. 行长度限制
 
-* 代码行长度要在80以内
+* 代码行长度要在80个字符以内
 
 ## 3. 括号和空格的位置
 
@@ -115,6 +121,18 @@ char *match_strdup(substring_t *s);
 
 ## 5. Typedefs
 
+**除了以下用途外，不要使用typedef:**
+
+* 完全不透明的类型
+
+* 避免整型数据的困扰
+
+* 使用kernel的sparse工具做变量类型检查
+
+* 定义C99标准中的新类型
+
+* 为了用户空间的类型安全
+
 ## 6. 函数
 
 * 函数要简短，一个函数只做一件事
@@ -127,12 +145,36 @@ char *match_strdup(substring_t *s);
 
 * 使用**goto**集中函数的退出
 **goto**的标签名可以设置为**out_free_buffer**，避免使用**err1:**和**err2:**的标签名
+```c
+int fun(int a)
+{
+	int result = 0;
+	char *buffer;
+
+	buffer = kmalloc(SIZE, GFP_KERNEL);
+	if (!buffer)
+		return -ENOMEM;
+
+	if (condition1) {
+		while (loop1) {
+		...
+		}
+		result = 1;
+		goto out_free_buffer;
+	}
+	...
+out_free_buffer:
+	kfree(buffer);
+	return result;
+}
+```
 
 ## 8. 注释
 
 * 不要注释怎么做，而是注释做了什么
 
-* 首选注释风格是：
+* 注释风格：
+
 ```c
 /*
  * This is the preferred style for multi-line
@@ -148,6 +190,54 @@ char *match_strdup(substring_t *s);
 
 ## 12. 宏，枚举和RTL
 
+* 宏定义常量使用大写
+```c
+#difine CONSTANT 0x123456
+```
+
+* 宏定义多行语句要放入do - while中
+```c
+#define macrofun(a, b, c)		\
+do {					\
+	if (a == 5)			\
+	do_this(b, c);			\
+} while (0)
+```
+
+* 宏定义表达式时要放在()中
+```c
+#define CONSTANT 0x4000
+#define CONSTEXP (CONSTANT | 3)
+```
+
+* **使用宏定义时要避免下列情况：**
+1) 影响控制流，如在宏定义中return
+```c
+#define FOO(x)				\
+do {					\
+	if (blah(x) < 0)		\
+		return -EBUGGERED;	\
+} while (0)
+```
+  2) 宏定义中含有局部变量
+```c
+#define FOO(val) bar(index, val)
+```
+
+## 13. 打印内核消息
+
+* 消息要简洁清晰明确
+
+* 在`<linux/device.h\>`, `<linux/printk.h\>`里面有打印消息的宏
+关联设备或驱动`<linux/device.h>`: dev_err(), dev_warn(), dev_info()等
+不关联设备或驱动`<linux/printk.h>`: pr_notice() pr_info(), pr_warn(), prerr()等
+
 ## 14. 分配内存
 
+* 分配内存时使用sizeof(指针), 而不是sizeof(结构体)
+```c
+p = kmalloc(sizeof(*p), ...);
+```
+
 [1]: https://www.kernel.org/doc/Documentation/process/coding-style.rst
+[2]: http://www.cnblogs.com/wang_yb/p/3532349.html
